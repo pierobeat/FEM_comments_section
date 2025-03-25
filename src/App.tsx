@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import "./App.css";
 import data from "./dummy-data/data.json";
 
 type User = {
