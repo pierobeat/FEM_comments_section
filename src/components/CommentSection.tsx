@@ -1,106 +1,197 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback, memo } from "react";
 import data from "@/dummy-data/data.json";
-import iconPlus from "@/assets/icon-plus.svg"
-import iconMinus from "@/assets/icon-minus.svg"
-import iconReply from "@/assets/icon-reply.svg"
-
-type User = {
-  image: { png: string; webp: string };
-  username: string;
-};
-
-type Reply = {
-  id: number;
-  content: string;
-  createdAt: string;
-  score: number;
-  replyingTo: string;
-  user: User;
-};
-
-type Comment = {
-  id: number;
-  content: string;
-  createdAt: string;
-  score: number;
-  user: User;
-  replies: Reply[];
-};
-
-const images: Record<string, string> = import.meta.glob('/src/assets/avatars/*.{png,webp}', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>;
+import { getImagePath } from "../utils/getImagePatch";
+import Swal from "sweetalert2";
+import type { 
+  User,
+  Comment,
+  Reply,
+  EditComment 
+} from '@/utils/types';
+import { CommentItem } from "./CommentItem";
 
 function CommentSection() {
-  const [profile] = useState<any[]>(data.currentUser);
+  const [profile] = useState<User>(data.currentUser);
   const [comments] = useState<Comment[]>(data.comments);
+  const [userComment, setUserComment] = useState<string>("");
+  const [replyingId, setReplyingId] = useState<number | null>(null);
+  const [userReplying, setUserReplying] = useState<string>("");
+  const [editUserComment, setEditUserComment] = useState<EditComment>({
+    id: null,
+    comment: ""
+  })
+  const [disableMainInput, setDisableMainInput] = useState<boolean>(false);
 
-  const CommentItem = ({ comment }: { comment: Comment | Reply | User }) => {
-    function getImagePath(imagePath: string): string {
-      const filename = imagePath.split('/').pop();
-      return images[`/src/assets/avatars/${filename}`] || imagePath; 
-    }
-    const commentDir = comment?.replyingTo ?? null;
-    const currentUser = comment.user.username === profile.username;
+  const handleReplyChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.preventDefault()
+    setUserReplying(e.target.value);
+  }, []);
+
+  const handleEditChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.preventDefault()
+    setEditUserComment((dt: EditComment) => ({...dt, comment: e.target.value}));
+  }, []);
+
+  const handleSendReply = useCallback(() => {
+    onAddComment(userReplying, replyingId, true);
+  }, [userReplying, replyingId]);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingId(null);
+    setDisableMainInput(false);
+  }, []);
+
+  function onAddComment(comment: string, id: number | null, isReplying: boolean) {
+    const getIds = (data: (Comment | Reply)[]): number[] => {
+      let ids: number[] = [];
+      data.forEach((dt: Comment | Reply) => {
+        ids.push(dt.id);
+        if (dt.replies && dt.replies.length > 0) {
+          ids = ids.concat(getIds(dt.replies));
+        }
+      });
+      return ids;
+    };
+  
+    const findCommentById = (data: (Comment | Reply)[], targetId: number): Comment | Reply | null => {
+      for (const item of data) {
+        if (item.id === targetId) return item;
+        if (item.replies && item.replies.length > 0) {
+          const found = findCommentById(item.replies, targetId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+  
+    const getLastId = Math.max(...getIds(comments));
     
+    const repliedComment = isReplying && id ? findCommentById(comments, id) : null;
   
-    return (
-      <div className="p-5 border rounded-md w-full flex gap-4 bg-white border-white">
-        <div id="SCORING" className="w-[10%]">
-          <div className=" h-fit flex flex-col gap-y-4 items-center justify-center bg-[#F5F6FA] border-[#F5F6FA] rounded-lg py-3">
-            <img src={iconPlus} alt="" />
-            <p className="font-semibold text-[#5357B6]">{comment.score}</p>
-            <img src={iconMinus} alt="" />
-          </div>
-        </div>
-        <div id="COMMENT" className="">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 ">
-              <img
-                src={getImagePath(comment.user.image.png)}
-                alt={comment.user.username}
-                className="w-10 h-10 rounded-full"
-              />
-              <p className="font-semibold">{comment.user.username}</p>
-              {currentUser && (
-                <div className="bg-[#5357B6] text-white px-1.5">
-                  <p>you</p>
-                </div>
-              )}
-              <p className="text-sm text-gray-500">{comment.createdAt}</p>
-            </div>
-            <div className="flex gap-2 items-end">
-              <img src={iconReply} alt="" className="h-fit pb-1" />
-              <p className="font-semibold text-[#5357B6]">Reply</p>
-            </div>
-          </div>
-          <p className="mt-2"><span className="font-semibold text-[#5357B6]">{(commentDir ? `@${commentDir} ` : "")}</span>{comment.content}</p>
-        </div>
-      </div>
-  )};
-  
+    if (repliedComment) {
+      const mentions = comment.match(/@(\w+)/g) || [];
+      
+      const mentionedUsernames = mentions.map(mention => mention.substring(1));
+      
+      console.log('Membalas komentar:', repliedComment.content);
+      console.log('User yang di-reply:', repliedComment.user.username);
+      console.log('Mentioned users:', mentionedUsernames);
+      
+      if ('replyingTo' in repliedComment) {
+        console.log('Ini adalah balasan untuk:', repliedComment.replyingTo);
+      }
+      
+      const pureComment = comment.replace(/@\w+/g, '').trim();
+      console.log('Komentar tanpa mention:', pureComment);
+    }
+  }
+
+  function onDeleteUserComment(id: number | null) { 
+    Swal.fire({
+      html: `<div class="text-left space-y-2">
+              <h1 class="font-semibold text-xl">Delete Comment</h1>
+              <p>Are you sure you want to delete this comment? this will remove the comment and can't be undone</p>
+            </div>`,
+      showDenyButton: true,
+      confirmButtonText: "YES, DELETE",
+      denyButtonText: "NO, CANCEL",
+      reverseButtons: true,
+      buttonsStyling: true,
+      width: 380,
+      customClass: {
+        popup: "w-[300px] max-w-[90%] p-4",
+        confirmButton: "swal2-deny",
+        denyButton: "swal2-cancel",
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire("Deleted!", "", "success");
+      } else if (result.isDenied) {
+        Swal.fire("Cancelled", "", "info");
+      }
+    });
+  }
 
   return (
-    <>
-      <section className="w-full max-w-[800px] p-4">
-        <h2 className="text-xl font-bold">Comments</h2>
-        <div className="space-y-4">
-          {comments.map((comment) => (
-            <div key={comment.id} className="space-y-4">
-              <CommentItem comment={comment} />
-              {comment.replies.length > 0 && (
-                <div className="ml-4 space-y-4 border-l-1 pl-4">
-                  {comment.replies.map((reply) => (
-                    <CommentItem key={reply.id} comment={reply} />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+    <section className="w-full max-w-[800px] h-[100vh] flex flex-col relative py-4">
+      <h2 className="text-xl font-bold">Comments</h2>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {comments.map((comment) => (
+          <div key={`comment-${comment.id}`} className="space-y-4">
+            <CommentItem 
+              comment={comment}
+              profile={profile}
+              editUserComment={editUserComment}
+              userReplying={userReplying}
+              replyingId={replyingId}
+              setEditUserComment={setEditUserComment}
+              setReplyingId={setReplyingId}
+              setUserReplying={setUserReplying}
+              setDisableMainInput={setDisableMainInput}
+              onAddComment={onAddComment}
+              onDeleteUserComment={onDeleteUserComment}
+              handleReplyChange={handleReplyChange}
+              handleEditChange={handleEditChange}
+              handleSendReply={handleSendReply}
+              handleCancelReply={handleCancelReply}
+            />
+            {comment.replies && comment.replies.length > 0 && (
+              <div className="ml-4 space-y-4 border-l pl-4">
+                {comment.replies.map((reply: Reply) => (
+                  <div key={`reply-${reply.id}`}>
+                    <CommentItem 
+                      comment={reply}
+                      profile={profile}
+                      editUserComment={editUserComment}
+                      userReplying={userReplying}
+                      replyingId={replyingId}
+                      setEditUserComment={setEditUserComment}
+                      setReplyingId={setReplyingId}
+                      setUserReplying={setUserReplying}
+                      setDisableMainInput={setDisableMainInput}
+                      onAddComment={onAddComment}
+                      onDeleteUserComment={onDeleteUserComment}
+                      handleReplyChange={handleReplyChange}
+                      handleEditChange={handleEditChange}
+                      handleSendReply={handleSendReply}
+                      handleCancelReply={handleCancelReply}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div name="MAIN-INPUT" className="p-6 bg-white flex gap-4 h-[20vh] max-h-[20vh]">
+        <div>
+          <img
+            src={getImagePath(profile.image.png)}
+            alt={profile.username}
+            className="rounded-full"
+          />
         </div>
-      </section>
-    </>
+        <textarea
+          placeholder="Add a comment..."
+          className="w-full p-2 border rounded-md h-full resize-none overflow-y-auto"
+          value={userComment}
+          onChange={(e) => {
+            e.preventDefault()
+            setUserComment(e.target.value)
+          }}
+          disabled={disableMainInput}
+        />
+        <div className="h-fit">
+          <button 
+            className={`cursor-pointer text-white uppercase py-2 w-[6rem] border-transparent rounded-lg ${disableMainInput ? "bg-[#5356b66e]" : "bg-[#5357B6]"}`}
+            onClick={() => onAddComment(userComment, null, false)}
+            disabled={disableMainInput}
+          >
+            send
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
