@@ -1,5 +1,5 @@
 import { useState, useCallback, memo } from "react";
-import data from "@/dummy-data/data.json";
+import data from "../dummy-data/data.json";
 import { getImagePath } from "../utils/getImagePatch";
 import Swal from "sweetalert2";
 import type { 
@@ -7,7 +7,7 @@ import type {
   Comment,
   Reply,
   EditComment 
-} from '@/utils/types';
+} from '../utils/types';
 import { CommentItem } from "./CommentItem";
 
 function CommentSection() {

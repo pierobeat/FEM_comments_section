@@ -11,7 +11,7 @@ import type {
    Comment,
    Reply,
    EditComment 
-} from '@/utils/types';
+} from '../utils/types';
 
 export const CommentItem = memo(({ 
    comment,

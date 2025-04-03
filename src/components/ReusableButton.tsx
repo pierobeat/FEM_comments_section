@@ -1,5 +1,3 @@
-import React from 'react'
-
 interface Button {
   Icon: string,
   label: string,
