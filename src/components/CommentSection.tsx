@@ -274,7 +274,7 @@ function CommentSection() {
           </div>
         ))}
       </div>
-      <div name="MAIN-INPUT" className="p-6 bg-white flex gap-4 mobile:h-[20vh] border-transparent rounded-xl">
+      <div className="p-6 bg-white flex gap-4 mobile:h-[20vh] border-transparent rounded-xl">
         <div className="max-[700px]:hidden">
           <img
             src={getImagePath(profile.image.png)}
