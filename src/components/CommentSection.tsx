@@ -232,7 +232,6 @@ function CommentSection() {
             setReplyingId={setReplyingId}
             setUserReplying={setUserReplying}
             setDisableMainInput={setDisableMainInput}
-            onAddComment={onAddComment}
             onDeleteUserComment={onDeleteUserComment}
             onUpdateComment={onUpdateComment}
             handleReplyChange={handleReplyChange}
@@ -262,7 +261,6 @@ function CommentSection() {
               setReplyingId={setReplyingId}
               setUserReplying={setUserReplying}
               setDisableMainInput={setDisableMainInput}
-              onAddComment={onAddComment}
               onDeleteUserComment={onDeleteUserComment}
               onUpdateComment={onUpdateComment}
               handleReplyChange={handleReplyChange}
