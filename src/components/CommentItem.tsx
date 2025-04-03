@@ -23,7 +23,7 @@ export const CommentItem = memo(({
    setReplyingId,
    setUserReplying,
    setDisableMainInput,
-   // onAddComment,
+   onAddComment,
    onDeleteUserComment,
    onUpdateComment,
    handleReplyChange,
@@ -40,7 +40,7 @@ export const CommentItem = memo(({
    setReplyingId: React.Dispatch<React.SetStateAction<number | null>>,
    setUserReplying: React.Dispatch<React.SetStateAction<string>>,
    setDisableMainInput: React.Dispatch<React.SetStateAction<boolean>>,
-   // onAddComment: (comment: string, id: number | null, isReplying: boolean) => void,
+   onAddComment: (comment: string, id: number | null, isReplying: boolean) => void,
    onDeleteUserComment: (id: number | null) => void,
    onUpdateComment: (id: number, updatedComment: string) => void,
    handleReplyChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void,
@@ -54,12 +54,54 @@ export const CommentItem = memo(({
    
    return editUserComment.id !== comment.id ? (
       <>
-         <div className="p-5 border rounded-md w-full flex gap-4 bg-white border-white">
-            <div id="SCORING" className="w-[10%] px-4">
-               <div className="h-fit flex flex-col gap-y-4 items-center justify-center bg-[#F5F6FA] border-[#F5F6FA] rounded-lg py-3">
+         <div className="p-5 border rounded-md w-full flex gap-4 bg-white border-white max-[700px]:flex-col-reverse">
+            <div id="SCORING" className="w-[10%] px-4 max-[700px]:w-full max-[700px]:px-0 max-[700px]:space-y-4">
+               <div className="h-fit flex flex-col gap-y-4 items-center justify-center max-[700px]:justify-between
+                  bg-[#F5F6FA] rounded-lg py-3 max-[700px]:flex-row max-[700px]:gap-x-4 
+                  max-[700px]:py-2 max-[700px]:px-4"
+               >
                   <img src={iconPlus} alt="" />
                   <p className="font-semibold text-[#5357B6]">{comment.score}</p>
                   <img src={iconMinus} alt="" />
+               </div>
+               <div className="mobile:hidden gap-x-1 items-end flex justify-center">
+                  {
+                     currentUser && (
+                        <>
+                           <ReusableButton 
+                           Icon={iconDelete}
+                           label="Delete"
+                           color="text-[#ED6368]"
+                           hoverColor="hover:bg-[#ed63686e]"
+                           buttonFunc={() => onDeleteUserComment(comment.id)}
+                           />
+                           <ReusableButton 
+                           Icon={iconEdit}
+                           label="Edit"
+                           color="text-[#5357B6]"
+                           hoverColor="hover:bg-[#5356b667]"
+                           buttonFunc={() => {
+                              setEditUserComment({
+                              id: comment.id,
+                              comment: commentDir ? commentDir + comment.content : comment.content
+                              })
+                              setDisableMainInput(true)
+                           }}
+                           />
+                        </>
+                     )
+                  }
+                  <ReusableButton 
+                     Icon={iconReply}
+                     label="Reply"
+                     color="text-[#5357B6]"
+                     hoverColor="hover:bg-[#5356b667]"
+                     buttonFunc={() => {
+                        setReplyingId(comment.id)
+                        setUserReplying(`@${user.username} `)
+                        setDisableMainInput(true)
+                     }}
+                  />
                </div>
             </div>
             <div id="COMMENT" className="w-[90%]">
@@ -78,7 +120,7 @@ export const CommentItem = memo(({
                   )}
                   <p className="text-sm text-gray-500">{comment.createdAt}</p>
                   </div>
-                  <div className="flex gap-x-1 items-end">
+                  <div className="mobile:flex gap-x-1 items-end hidden">
                      {
                         currentUser && (
                            <>

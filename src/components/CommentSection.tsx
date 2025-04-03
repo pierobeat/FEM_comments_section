@@ -12,9 +12,7 @@ import { CommentItem } from "./CommentItem";
 
 function CommentSection() {
   const [profile] = useState<User>(data.currentUser);
-  const [comments, setComments] = useState<Comment[]>(data.comments);
-  console.log({comments});
-  
+  const [comments, setComments] = useState<Comment[]>(data.comments);  
   const [userComment, setUserComment] = useState<string>("");
   const [replyingId, setReplyingId] = useState<number | null>(null);
   const [userReplying, setUserReplying] = useState<string>("");
@@ -276,32 +274,43 @@ function CommentSection() {
           </div>
         ))}
       </div>
-      <div name="MAIN-INPUT" className="p-6 bg-white flex gap-4 h-[20vh] max-h-[20vh] border-transparent rounded-xl">
-        <div>
+      <div name="MAIN-INPUT" className="p-6 bg-white flex gap-4 mobile:h-[20vh] border-transparent rounded-xl">
+        <div className="max-[700px]:hidden">
           <img
             src={getImagePath(profile.image.png)}
             alt={profile.username}
             className="rounded-full"
           />
         </div>
-        <textarea
-          placeholder="Add a comment..."
-          className="w-full p-2 border rounded-md h-full resize-none overflow-y-auto"
-          value={userComment}
-          onChange={(e) => {
-            e.preventDefault()
-            setUserComment(e.target.value)
-          }}
-          disabled={disableMainInput}
-        />
-        <div className="h-fit">
-          <button 
-            className={`cursor-pointer text-white uppercase py-2 w-[6rem] border-transparent rounded-lg ${disableMainInput ? "bg-[#5356b66e]" : "bg-[#5357B6]"}`}
-            onClick={() => onAddComment(userComment, null, false)}
+        <div className="flex w-full gap-x-2 gap-y-4 flex-col mobile:flex-row">
+          <textarea
+            placeholder="Add a comment..."
+            className="w-full p-2 border rounded-md h-full resize-none overflow-y-auto max-[700px]:h-[100px]"
+            value={userComment}
+            onChange={(e) => {
+              e.preventDefault()
+              setUserComment(e.target.value)
+            }}
             disabled={disableMainInput}
-          >
-            send
-          </button>
+          />
+          <div className="flex justify-between">
+            <div className="min-[700px]:hidden">
+              <img
+                src={getImagePath(profile.image.png)}
+                alt={profile.username}
+                className="rounded-full"
+              />
+            </div>
+            <div className="h-fit">
+              <button 
+                className={`cursor-pointer text-white uppercase py-2 w-[6rem] border-transparent rounded-lg ${disableMainInput ? "bg-[#5356b66e]" : "bg-[#5357B6]"}`}
+                onClick={() => onAddComment(userComment, null, false)}
+                disabled={disableMainInput}
+              >
+                send
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
