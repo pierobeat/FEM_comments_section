@@ -163,13 +163,13 @@ export const CommentItem = memo(({
          </div>
          {
             replyingId && replyingId === comment.id && (
-               <div className="p-6 bg-white flex gap-4 h-[20vh] max-h-[20vh]">
+               <div className="p-6 bg-white flex gap-4 h-[20vh] max-h-[20vh] mt-4">
                   <div>
-                  <img
-                     src={getImagePath(profile.image.png)}
-                     alt={profile.username}
-                     className="rounded-full"
-                  />
+                     <img
+                        src={getImagePath(profile.image.png)}
+                        alt={profile.username}
+                        className="rounded-full"
+                     />
                   </div>
                   <textarea
                   placeholder="Add a comment..."

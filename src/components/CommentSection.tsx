@@ -186,12 +186,15 @@ function CommentSection() {
       return;
     }
   
+    // Menghapus bagian komentar yang diawali dengan @
+    const cleanedComment = updatedComment.replace(/@\S+/g, '').trim();
+  
     try {
       setComments((prevComments) => {
         const updateComment = (data: (Comment | Reply)[]): (Comment | Reply)[] => {
           return data.map((item) => {
             if (item.id === id) {
-              return { ...item, content: updatedComment };
+              return { ...item, content: cleanedComment };
             } else if (item.replies && item.replies.length > 0) {
               return { ...item, replies: updateComment(item.replies) };
             }
@@ -217,6 +220,7 @@ function CommentSection() {
       console.error("Error updating comment:", error);
     }
   }
+  
 
   const repliesDesign = (replies: Reply[], level = 1) => (
     <div className="space-y-4 border-l-2 border-[#EDEEF2] pl-4 mt-4" style={{ marginLeft: `${level * 30}px` }}>
