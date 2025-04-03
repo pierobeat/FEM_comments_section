@@ -47,7 +47,7 @@ export const CommentItem = memo(({
    handleCancelReply: () => void
 }) => {
    const {user} = comment
-   const commentDir = comment.replyingTo ? `@${comment.replyingTo} ` : "";
+   const commentDir = 'replyingTo' in comment ? `@${comment.replyingTo} ` : "";
    const currentUser = comment.user.username === profile.username;
    
    return editUserComment.id !== comment.id ? (

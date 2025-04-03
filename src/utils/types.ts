@@ -11,13 +11,17 @@ type BaseInteraction = {
    content: string
    createdAt: string
    score: number
-   user: User
+   user: User,
    replies?: Reply[]
 }
 
-export type Comment = BaseInteraction
+export type Comment = BaseInteraction & {
+   replyingTo?: string | null,
+   replies?: Reply[]
+}
 export type Reply = BaseInteraction & {
-   replyingTo: string | null
+   replyingTo?: string | null,
+   replies?: Reply[]
 }
 
 export type EditComment = {

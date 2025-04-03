@@ -90,7 +90,7 @@ function CommentSection() {
         user: profile,
         replies: [],
         ...(isReplying ? { replyingTo } : {}),
-      };
+      } as any;
   
       if (isReplying && replyingId !== null) {
         setComments((prevComments) => {
