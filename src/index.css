@@ -9,3 +9,13 @@
 p {
   font-size: 16px;
 }
+
+textarea {
+  border: 2px solid #6a7282!important;
+  outline: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+textarea:focus {
+  border-color: #5357B6;
+}

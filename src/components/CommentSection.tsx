@@ -12,7 +12,9 @@ import { CommentItem } from "./CommentItem";
 
 function CommentSection() {
   const [profile] = useState<User>(data.currentUser);
-  const [comments] = useState<Comment[]>(data.comments);
+  const [comments, setComments] = useState<Comment[]>(data.comments);
+  console.log({comments});
+  
   const [userComment, setUserComment] = useState<string>("");
   const [replyingId, setReplyingId] = useState<number | null>(null);
   const [userReplying, setUserReplying] = useState<string>("");
@@ -41,52 +43,101 @@ function CommentSection() {
     setDisableMainInput(false);
   }, []);
 
-  function onAddComment(comment: string, id: number | null, isReplying: boolean) {
-    const getIds = (data: (Comment | Reply)[]): number[] => {
-      let ids: number[] = [];
-      data.forEach((dt: Comment | Reply) => {
-        ids.push(dt.id);
-        if (dt.replies && dt.replies.length > 0) {
-          ids = ids.concat(getIds(dt.replies));
-        }
+  function onAddComment(comment: string, replyingId: number | null, isReplying: boolean) {
+    if (!comment.trim()) {
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Comment cannot be empty!",
       });
-      return ids;
-    };
+      return;
+    }
   
-    const findCommentById = (data: (Comment | Reply)[], targetId: number): Comment | Reply | null => {
-      for (const item of data) {
-        if (item.id === targetId) return item;
-        if (item.replies && item.replies.length > 0) {
-          const found = findCommentById(item.replies, targetId);
-          if (found) return found;
+    try {
+      const getIds = (data: (Comment | Reply)[]): number[] => {
+        let ids: number[] = [];
+        data.forEach((dt: Comment | Reply) => {
+          ids.push(dt.id);
+          if (dt.replies && dt.replies.length > 0) {
+            ids = ids.concat(getIds(dt.replies));
+          }
+        });
+        return ids;
+      };
+  
+      const findCommentById = (data: (Comment | Reply)[], targetId: number): Comment | Reply | null => {
+        for (const item of data) {
+          if (item.id === targetId) return item;
+          if (item.replies && item.replies.length > 0) {
+            const found = findCommentById(item.replies, targetId);
+            if (found) return found;
+          }
         }
-      }
-      return null;
-    };
+        return null;
+      };
   
-    const getLastId = Math.max(...getIds(comments));
-    
-    const repliedComment = isReplying && id ? findCommentById(comments, id) : null;
+      const getLastId = Math.max(...getIds(comments), 0);
+      const repliedComment = replyingId !== null ? findCommentById(comments, replyingId) : null;
+      
+      const replyingTo = repliedComment ? repliedComment.user.username : "";
+      
+      // Remove mention from the comment if it matches replyingTo
+      const pureComment = comment.replace(new RegExp(`^@${replyingTo}\\s*`, "i"), "").trim();
   
-    if (repliedComment) {
-      const mentions = comment.match(/@(\w+)/g) || [];
-      
-      const mentionedUsernames = mentions.map(mention => mention.substring(1));
-      
-      console.log('Membalas komentar:', repliedComment.content);
-      console.log('User yang di-reply:', repliedComment.user.username);
-      console.log('Mentioned users:', mentionedUsernames);
-      
-      if ('replyingTo' in repliedComment) {
-        console.log('Ini adalah balasan untuk:', repliedComment.replyingTo);
+      const newComment: Comment | Reply = {
+        id: getLastId + 1,
+        content: pureComment,
+        createdAt: "Just now",
+        score: 0,
+        user: profile,
+        replies: [],
+        ...(isReplying ? { replyingTo } : {}),
+      };
+  
+      if (isReplying && replyingId !== null) {
+        setComments((prevComments) => {
+          const updateReplies = (data: Comment[]): Comment[] => {
+            return data.map((item) => {
+              if (item.id === replyingId) {
+                return {
+                  ...item,
+                  replies: [...(item.replies || []), newComment],
+                };
+              } else if (item.replies && item.replies.length > 0) {
+                return { ...item, replies: updateReplies(item.replies) };
+              }
+              return item;
+            });
+          };
+          return updateReplies(prevComments);
+        });
+      } else {
+        setComments((prevComments) => [...prevComments, newComment]);
       }
-      
-      const pureComment = comment.replace(/@\w+/g, '').trim();
-      console.log('Komentar tanpa mention:', pureComment);
+  
+      setUserComment("");
+      setUserReplying("");
+      setReplyingId(null);
+      setDisableMainInput(false);
+  
+      Swal.fire({
+        icon: "success",
+        title: "Success!",
+        text: isReplying ? "Your reply has been added." : "Your comment has been added.",
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error!",
+        text: "Something went wrong while adding your comment.",
+      });
+      console.error("Error adding comment:", error);
     }
   }
-
-  function onDeleteUserComment(id: number | null) { 
+  
+  function onDeleteUserComment(id: number | null) {
+    if (id === null) return;
+  
     Swal.fire({
       html: `<div class="text-left space-y-2">
               <h1 class="font-semibold text-xl">Delete Comment</h1>
@@ -105,6 +156,19 @@ function CommentSection() {
       },
     }).then((result) => {
       if (result.isConfirmed) {
+        setComments((prevComments) => {
+          const deleteComment = (data: (Comment | Reply)[]): (Comment | Reply)[] => {
+            return data
+              .map((item) => ({
+                ...item,
+                replies: item.replies ? deleteComment(item.replies) : [],
+              }))
+              .filter((item) => item.id !== id); // Hapus jika id cocok
+          };
+  
+          return deleteComment(prevComments);
+        });
+  
         Swal.fire("Deleted!", "", "success");
       } else if (result.isDenied) {
         Swal.fire("Cancelled", "", "info");
@@ -112,10 +176,82 @@ function CommentSection() {
     });
   }
 
+  function onUpdateComment(id: number | null, updatedComment: string) {
+    if (id === null) return;
+  
+    if (!updatedComment.trim()) {
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Comment cannot be empty!",
+      });
+      return;
+    }
+  
+    try {
+      setComments((prevComments) => {
+        const updateComment = (data: (Comment | Reply)[]): (Comment | Reply)[] => {
+          return data.map((item) => {
+            if (item.id === id) {
+              return { ...item, content: updatedComment };
+            } else if (item.replies && item.replies.length > 0) {
+              return { ...item, replies: updateComment(item.replies) };
+            }
+            return item;
+          });
+        };
+        return updateComment(prevComments);
+      });
+  
+      setEditUserComment({ id: null, comment: "" });
+  
+      Swal.fire({
+        icon: "success",
+        title: "Updated!",
+        text: "Your comment has been updated successfully.",
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error!",
+        text: "Something went wrong while updating your comment.",
+      });
+      console.error("Error updating comment:", error);
+    }
+  }
+
+  const repliesDesign = (replies: Reply[], level = 1) => (
+    <div className="space-y-4 border-l-2 border-[#EDEEF2] pl-4 mt-4" style={{ marginLeft: `${level * 30}px` }}>
+      {replies.map((reply) => (
+        <div key={`reply-${reply.id}`}>
+          <CommentItem 
+            comment={reply}
+            profile={profile}
+            editUserComment={editUserComment}
+            userReplying={userReplying}
+            replyingId={replyingId}
+            setEditUserComment={setEditUserComment}
+            setReplyingId={setReplyingId}
+            setUserReplying={setUserReplying}
+            setDisableMainInput={setDisableMainInput}
+            onAddComment={onAddComment}
+            onDeleteUserComment={onDeleteUserComment}
+            onUpdateComment={onUpdateComment}
+            handleReplyChange={handleReplyChange}
+            handleEditChange={handleEditChange}
+            handleSendReply={handleSendReply}
+            handleCancelReply={handleCancelReply}
+          />
+          {reply.replies && reply.replies.length > 0 && repliesDesign(reply.replies, level + 1)}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <section className="w-full max-w-[800px] h-[100vh] flex flex-col relative py-4">
       <h2 className="text-xl font-bold">Comments</h2>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto py-4 pr-2 space-y-4">
         {comments.map((comment) => (
           <div key={`comment-${comment.id}`} className="space-y-4">
             <CommentItem 
@@ -130,40 +266,17 @@ function CommentSection() {
               setDisableMainInput={setDisableMainInput}
               onAddComment={onAddComment}
               onDeleteUserComment={onDeleteUserComment}
+              onUpdateComment={onUpdateComment}
               handleReplyChange={handleReplyChange}
               handleEditChange={handleEditChange}
               handleSendReply={handleSendReply}
               handleCancelReply={handleCancelReply}
             />
-            {comment.replies && comment.replies.length > 0 && (
-              <div className="ml-4 space-y-4 border-l pl-4">
-                {comment.replies.map((reply: Reply) => (
-                  <div key={`reply-${reply.id}`}>
-                    <CommentItem 
-                      comment={reply}
-                      profile={profile}
-                      editUserComment={editUserComment}
-                      userReplying={userReplying}
-                      replyingId={replyingId}
-                      setEditUserComment={setEditUserComment}
-                      setReplyingId={setReplyingId}
-                      setUserReplying={setUserReplying}
-                      setDisableMainInput={setDisableMainInput}
-                      onAddComment={onAddComment}
-                      onDeleteUserComment={onDeleteUserComment}
-                      handleReplyChange={handleReplyChange}
-                      handleEditChange={handleEditChange}
-                      handleSendReply={handleSendReply}
-                      handleCancelReply={handleCancelReply}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+            {comment.replies && comment.replies.length > 0 && repliesDesign(comment.replies, 1)}
           </div>
         ))}
       </div>
-      <div name="MAIN-INPUT" className="p-6 bg-white flex gap-4 h-[20vh] max-h-[20vh]">
+      <div name="MAIN-INPUT" className="p-6 bg-white flex gap-4 h-[20vh] max-h-[20vh] border-transparent rounded-xl">
         <div>
           <img
             src={getImagePath(profile.image.png)}
@@ -195,4 +308,4 @@ function CommentSection() {
   );
 }
 
-export default CommentSection
+export default memo(CommentSection);

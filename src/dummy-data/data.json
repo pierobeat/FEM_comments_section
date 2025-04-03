@@ -91,6 +91,20 @@
         "username": "amyrobson"
       },
       "replies": []
+    },
+    {
+      "id": 7,
+      "content": "Impressive!",
+      "createdAt": "a day ago",
+      "score": 12,
+      "user": {
+        "image": { 
+          "png": "/images/avatars/image-juliusomo.png",
+          "webp": "/images/avatars/image-juliusomo.webp"
+        },
+        "username": "juliusomo"
+      },
+      "replies": []
     }
   ]
 }
